@@ -10,15 +10,15 @@ DHT dht(DHTPIN, DHTTYPE);
 float h;
 float t;
 
-//relay initialization
-int bulb = 19; //bulb
-int fan = 23; //fan
-int motor = 13; //turning egg
+const int motor = 19;
+const int fan = 23;
+const int bulb = 12;
 
 void setup() {
  pinMode(bulb, OUTPUT);
  pinMode(fan, OUTPUT);
  pinMode(motor, OUTPUT);
+ 
  Serial.begin(115200);
   dht.begin();
 }
@@ -27,13 +27,28 @@ void loop() {
   // Wait a few seconds between measurements.
   getreadings();
   delay(2000);
+  if (t>40)
+  {
+    bulb_off();
+  }
+  if (t<36)
+  {
+    bulb_on();
+  }
+  if (h>56)
+  {
+    fan_on();
+  }
+  if (h<49)
+  {
+    fan_off();
+  }
   
- tempcontrol();
- Humicontrol();
+  
+
  turningegg();
 }
 void getreadings(){
-  
    // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
    h = dht.readHumidity();
@@ -54,29 +69,23 @@ void getreadings(){
   
   }
   
-  void tempcontrol(){
+  void bulb_on(){
   digitalWrite(bulb, HIGH);
-  if (t>40){
-    digitalWrite(bulb, LOW);
-    }
-    if (t<38){
-    digitalWrite(bulb, HIGH);
-   }
+  }
+   void bulb_off(){
+  digitalWrite(bulb, LOW);
   }
   
-void Humicontrol(){
-  digitalWrite(fan, LOW);
- if (h>65){
-   digitalWrite(fan, HIGH);
+void fan_on(){
+  digitalWrite(fan, HIGH);
   }
-   if (t<51){
-    digitalWrite(bulb, LOW);
-   }
+ void fan_off(){
+  digitalWrite(fan, LOW);
   }
 
 void turningegg(){
-  digitalWrite(motor, HIGH);
-  delay(19000000);
-  digitalWrite(motor, LOW);
-  delay(60000000);
+//  digitalWrite(motor, HIGH);
+//  delay(19000000);
+//  digitalWrite(motor, LOW);
+//  delay(60000000);
   }
