@@ -26,8 +26,8 @@ const int fan = 13;
 const int bulb = 12;
 
 // Replace the next variables with your SSID/Password combination
-const char* ssid = "UCC KLEOS";
-const char* password = "Kleosucc@2019";
+const char* ssid = "SuperJosh";
+const char* password = "@super1234";
 //m,./@1234
 // Add your MQTT Broker IP address, example:
 //const char* mqtt_server = "192.168.1.144";
@@ -126,7 +126,7 @@ void reconnect() {
 }
 
 void loop() {
-
+turningegg();
   // Wait a few seconds between measurements.
   getreadings();
   delay(2000);
@@ -147,7 +147,7 @@ void loop() {
     fan_off();
   }
   
- turningegg();
+ 
  
   if (!client.connected()) {
     reconnect();
