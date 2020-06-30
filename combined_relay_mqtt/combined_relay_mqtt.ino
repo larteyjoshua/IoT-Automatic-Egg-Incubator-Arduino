@@ -5,6 +5,9 @@
 #define DHTPIN 18     // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
 // Connect pin 1 (on the left) of the sensor to +5V
 // Connect pin 18 of the sensor to whatever your DHTPIN is
 // Connect pin 4 (on the right) of the sensor to GROUND
@@ -15,7 +18,7 @@ float t;
 
 /* Two "independant" timed events */
 const long eventTime_1 = 25000; //in ms
-const long eventTime_2 = 120000; //in ms
+const long eventTime_2 = 28800000000 ; //in ms 120000
 
 /* When did they start the race? */
 unsigned long previousTime_1 = 0;
@@ -24,10 +27,11 @@ unsigned long previousTime_2 = 0;
 const int motor = 19;
 const int fan = 13;
 const int bulb = 12;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 // Replace the next variables with your SSID/Password combination
-const char* ssid = "SuperJosh";
-const char* password = "@super1234";
+const char* ssid = "WorkSHop";
+const char* password = "inf12345";
 //m,./@1234
 // Add your MQTT Broker IP address, example:
 //const char* mqtt_server = "192.168.1.144";
@@ -48,6 +52,9 @@ void setup() {
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+
+  lcd.begin(); // sixteen characters across - 2 lines
+  lcd.backlight();
 }
 
 void setup_wifi() {
@@ -174,6 +181,15 @@ turningegg();
       sensorValues.toCharArray(sensorReading, (sensorValues.length() + 1));
       client.publish("/larteyjoshua@gmail.com/SensorData", sensorReading);
       Serial.println(sensorReading);
+      lcd.setCursor(0,0);
+      lcd.print("Temp: ");
+       lcd.print(TempString);
+       lcd.print("C");
+     // 8th character - 2nd line 
+       lcd.setCursor(0,1);
+       lcd.print("Humi: ");
+       lcd.print(HumiString);
+       lcd.print("%");
   }
 
 }
@@ -220,7 +236,7 @@ void turningegg(){
   /* This is my event_1 */
   if ( currentTime - previousTime_1 >= eventTime_1) {
     Serial.println("Egg Rotating");
-     digitalWrite(motor, HIGH);
+     digitalWrite(motor, LOW);
     /* Update the timing for the next event*/
     previousTime_1 = currentTime;
   }
@@ -229,7 +245,7 @@ void turningegg(){
   else if ( currentTime - previousTime_2 >= eventTime_2) {
 
     Serial.println("Motor off for 8 hours");
-    digitalWrite(motor, LOW);
+    digitalWrite(motor, HIGH);
     /* Update the timing for the next event*/
     previousTime_2 = currentTime;
   }

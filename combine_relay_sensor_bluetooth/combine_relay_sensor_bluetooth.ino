@@ -8,7 +8,8 @@
 #include "DHT.h"
 #define DHTPIN 18     // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
 // Connect pin 1 (on the left) of the sensor to +5V
 // Connect pin 18 of the sensor to whatever your DHTPIN is
 // Connect pin 4 (on the right) of the sensor to GROUND
@@ -17,9 +18,12 @@ DHT dht(DHTPIN, DHTTYPE);
 float h;
 float t;
 
+// Set the LCD address to 0x27 for a 16 chars and 2 line display
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
 /* Two "independant" timed events */
 const long eventTime_1 = 25000; //in ms
-const long eventTime_2 = 120000; //in ms
+const long eventTime_2 = 28800000000 ; //in ms 120000
 
 /* When did they start the race? */
 unsigned long previousTime_1 = 0;
@@ -51,6 +55,9 @@ void setup() {
   // Bluetooth device name
  SerialBT.begin("IoT Automatic Egg Incubator");
  Serial.println("The device started, now you can pair it with bluetooth!");
+
+ lcd.begin(); // sixteen characters across - 2 lines
+  lcd.backlight();
 }
 
 void getreadings(){
@@ -95,7 +102,7 @@ void turningegg(){
   /* This is my event_1 */
   if ( currentTime - previousTime_1 >= eventTime_1) {
     Serial.println("Egg Rotating");
-     digitalWrite(motor, HIGH);
+     digitalWrite(motor, LOW);
     /* Update the timing for the next event*/
     previousTime_1 = currentTime;
   }
@@ -103,7 +110,7 @@ void turningegg(){
   else if ( currentTime - previousTime_2 >= eventTime_2) {
 
     Serial.println("Motor off for 8 hours");
-    digitalWrite(motor, LOW);
+    digitalWrite(motor, HIGH);
     /* Update the timing for the next event*/
     previousTime_2 = currentTime;
   }
@@ -147,10 +154,20 @@ void loop(){
       
      
       char sensorReading[90];
-      String sensorValues = "{ \"temperature\": \"" + String(TempString) + "\", \"humidity\" : \"" + String(HumiString) + "\"}";
+      String sensorValues = "{\"temperature\": \"" + String(TempString) + "\", \"humidity\" : \"" + String(HumiString) + "\"}";
       sensorValues.toCharArray(sensorReading, (sensorValues.length() + 1));
       SerialBT.println( sensorReading);
       Serial.println(sensorReading);
+
+      lcd.setCursor(0,0);
+  lcd.print("Temp: ");
+  lcd.print(TempString);
+   lcd.print("C");
+  // 8th character - 2nd line 
+   lcd.setCursor(0,1);
+   lcd.print("Humi: ");
+   lcd.print(HumiString);
+   lcd.print("%");
   }
     
   // Read received messages (LED control command)
@@ -162,23 +179,23 @@ void loop(){
     else{
       message = "";
     }
-    Serial.write(incomingChar);  
+    Serial.println(incomingChar);  
   }
   // Check received message and control output accordingly
-  if (message =="heaton"){
+  if (message =="1"){
     Serial.println("bulb is on");
       bulb_on();
   }
-  else if (message =="heatoff"){
+  else if (message =="2"){
      Serial.println("bulb is off");
       bulb_off();
   }
-  else if(message == "airoff"){
-      Serial.println("fan is off");
-      fan_off();
-    }
-    else if(message == "airon"){
+  else if(message == "3"){
       Serial.println("fan is on");
+      fan_on();
+    }
+    else if(message == "4"){
+      Serial.println("fan is off");
       fan_off();
     }
 
