@@ -159,7 +159,7 @@ void loop(){
       SerialBT.println( sensorReading);
       Serial.println(sensorReading);
 
-      lcd.setCursor(0,0);
+  lcd.setCursor(0,0);
   lcd.print("Temp: ");
   lcd.print(TempString);
    lcd.print("C");

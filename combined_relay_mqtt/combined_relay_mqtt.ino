@@ -1,4 +1,5 @@
 
+
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "DHT.h"
@@ -105,7 +106,7 @@ void setup_wifi() {
     }
     else if(messageTemp == "airon"){
       Serial.println("fan is on");
-      fan_off();
+      fan_on();
     }
   }
 }
