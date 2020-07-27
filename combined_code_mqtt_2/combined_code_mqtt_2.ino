@@ -4,9 +4,13 @@ extern "C" {
   #include "freertos/FreeRTOS.h"
   #include "freertos/timers.h"
 }
+#include "FS.h"
+#include "SD.h"
+#include "SPI.h"
+
 #include <AsyncMqttClient.h>
 #include "DHT.h"
-#define DHTPIN 18     // Digital pin connected to the DHT sensor
+#define DHTPIN 17     // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
@@ -20,30 +24,23 @@ DHT dht(DHTPIN, DHTTYPE);
 float h;
 float t;
 char daysOfTheWeek[7][12] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+String dataMessage;
 
-/* Two "independant" timed events */
-const long eventTime_1 = 25000; //in ms
-//const long eventTime_2 = 28800000000 ; //in ms 120000
-
-/* When did they start the race? */
-unsigned long previousTime_1 = 0;
-unsigned long previousTime_2 = 0;
-
-const int motor = 19;
-const int fan = 13;
-const int bulb = 12;
+const int motor = 16;
+const int fan = 27;
+const int bulb = 14;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 long lastMsg = 0;
 char msg[50];
+// Save reading number on RTC memory
+RTC_DATA_ATTR int readingID = 0;
 
 // Change the credentials below, so your ESP32 connects to your router
-#define WIFI_SSID "WorkSHop"
-#define WIFI_PASSWORD "inf12345"
+#define WIFI_SSID "SuperJosh"
+#define WIFI_PASSWORD "useyourdata"
 
-// Change the MQTT_HOST variable to your Raspberry Pi IP address, 
-// so it connects to your Mosquitto MQTT broker
-#define MQTT_HOST "mqtt.dioty.co"
-#define MQTT_PORT 1883
+
+
 
 // Create objects to handle MQTT client
 AsyncMqttClient mqttClient;
@@ -142,6 +139,15 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
       Serial.println("fan is on");
       fan_on();
     }
+   else if(messageTemp == "getdata"){
+      Serial.println("reading data");
+      readFile(SD, "/incubatordata.txt");
+    
+    }
+    else if(messageTemp == "delete"){
+      Serial.println("deletingdata data");
+      deleteandcreate();
+    }
   }
  
   Serial.println("Publish received.");
@@ -162,6 +168,74 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   Serial.print("  total: ");
   Serial.println(total);
 }
+void readFile(fs::FS &fs, const char * path){
+    Serial.printf("Reading file: %s\n", path);
+
+    File file = fs.open(path);
+    if(!file){
+        Serial.println("Failed to open file for reading");
+        return;
+    }
+
+    Serial.print("Read from file: ");
+    while(file.available()){
+    Serial.write(file.read());
+   String datavalues = (file.readString());
+
+//        // Convert the value to a char array
+//      char dataString[1000];
+//      dtostrf( (file.readString()), 1, 2, dataString);
+      char dataReading[10000];
+//      String dataValues= String(dataString);
+       datavalues.toCharArray(dataReading, (datavalues.length() + 1));
+        uint16_t packetIdPub2 = mqttClient.publish("/larteyjoshua@gmail.com/incubatordata", 2, true, dataReading);
+    }
+    file.close();
+}
+void writeFile(fs::FS &fs, const char * path, const char * message){
+    Serial.printf("Writing file: %s\n", path);
+
+    File file = fs.open(path, FILE_WRITE);
+    if(!file){
+        Serial.println("Failed to open file for writing");
+        return;
+    }
+    File file2 = fs.open(path);
+    if (file2.available()){
+      Serial.println("File exist");
+    }
+    else if(file.print(message)){
+        Serial.println("File written");
+    } else {
+        Serial.println("Write failed");
+    }
+    file.close();
+}
+
+void appendFile(fs::FS &fs, const char * path, const char * message){
+    Serial.printf("Appending to file: %s\n", path);
+
+    File file = fs.open(path, FILE_APPEND);
+    if(!file){
+        Serial.println("Failed to open file for appending");
+        return;
+    }
+    if(file.print(message)){
+        Serial.println("Message appended");
+    } else {
+        Serial.println("Append failed");
+    }
+    file.close();
+}
+
+void deleteFile(fs::FS &fs, const char * path){
+    Serial.printf("Deleting file: %s\n", path);
+    if(fs.remove(path)){
+        Serial.println("File deleted");
+    } else {
+        Serial.println("Delete failed");
+    }
+}
 
 void setup() {
   pinMode(bulb, OUTPUT);
@@ -171,6 +245,33 @@ void setup() {
   Serial.begin(115200);
   lcd.begin(); // sixteen characters across - 2 lines
   lcd.backlight();
+
+if(!SD.begin()){
+        Serial.println("Card Mount Failed");
+        return;
+    }
+    uint8_t cardType = SD.cardType();
+
+    if(cardType == CARD_NONE){
+        Serial.println("No SD card attached");
+        return;
+    }
+
+    Serial.print("SD Card Type: ");
+    if(cardType == CARD_MMC){
+        Serial.println("MMC");
+    } else if(cardType == CARD_SD){
+        Serial.println("SDSC");
+    } else if(cardType == CARD_SDHC){
+        Serial.println("SDHC");
+    } else {
+        Serial.println("UNKNOWN");
+    }
+
+ writeFile(SD, "/incubatordata.txt", " ID,Timestamp,Temperature,Humidity  \r\n");
+
+
+  
   
 if (! rtc.begin()) 
   {
@@ -181,8 +282,8 @@ if (! rtc.begin())
   {
     Serial.print("RTC is NOT running!");
   }
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));//auto update from computer time
-    //rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));// to set the time manualy 
+    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));//auto update from computer time
+    rtc.adjust(DateTime(2020, 7, 8, 11, 57, 0));// to set the time manualy 
 
 
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
@@ -196,7 +297,7 @@ if (! rtc.begin())
   mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
-  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  mqttClient.setServer("mqtt.dioty.co", 1883);
   mqttClient.setCredentials("larteyjoshua@gmail.com","7f8a9110");
 
   connectToWifi();
@@ -233,7 +334,9 @@ void loop() {
     Serial.print(':');
     Serial.print(now.second());
     Serial.print("  ");
+    
     delay(3000);
+   
 
    
     Serial.print(F("DATE"));
@@ -246,6 +349,7 @@ void loop() {
     Serial.print('/');
     Serial.print(now.year());
     Serial.print("  ");
+    
   
 //    if ((now.hour()==18) && (now.minute()==36)){
 //      
@@ -278,7 +382,6 @@ void loop() {
        digitalWrite(motor, LOW);
       }
    
-//  turningegg();
   long time = millis();
   if (time - lastMsg > 30000) {
     lastMsg = time;
@@ -293,13 +396,14 @@ void loop() {
       dtostrf( h, 1, 2, HumiString);
       Serial.print(" Humidity: ");
       Serial.println(HumiString);
-      
+       // Convert the value to a char array
+       
      
       char sensorReading[90];
       String sensorValues = "{ \"temperature\": \"" + String(TempString) + "\", \"humidity\" : \"" + String(HumiString) + "\"}";
       sensorValues.toCharArray(sensorReading, (sensorValues.length() + 1));
      uint16_t packetIdPub2 = mqttClient.publish("/larteyjoshua@gmail.com/SensorData", 2, true, sensorReading);
-    Serial.print("Publishing on topic esp32/temperature at QoS 2, packetId: ");
+    Serial.print("Publishing on topic esp32/SensorData at QoS 2, packetId: ");
     Serial.println(packetIdPub2);
       lcd.setCursor(0,0);
       lcd.print("Temp: ");
@@ -310,6 +414,16 @@ void loop() {
        lcd.print("Humi: ");
        lcd.print(HumiString);
        lcd.print("%");
+        readingID++;
+
+        char Timedate[20];
+sprintf(Timedate, "%02d:%02d:%02d %02d/%02d/%02d",  now.hour(), now.minute(), now.second(), now.day(), now.month(), now.year());
+Serial.print(F("Date/Time: "));
+Serial.println(Timedate);
+     dataMessage = String(readingID) + "," + String(Timedate) + "," + String(TempString) + "," + String(HumiString) + "\r\n";
+  Serial.print("Save data: ");
+  Serial.println(dataMessage);
+  appendFile(SD, "/incubatordata.txt", dataMessage.c_str());
   }
 }
 
@@ -347,7 +461,8 @@ void fan_on(){
  void fan_off(){
   digitalWrite(fan, LOW);
   }
-
-//void turningegg(){
-
-//}
+  void deleteandcreate(){
+    deleteFile(SD, "/incubatordata.txt");
+    writeFile(SD, "/incubatordata.txt", " ID,Timestamp,Temperature,Humidity \r\n");
+    }
+  

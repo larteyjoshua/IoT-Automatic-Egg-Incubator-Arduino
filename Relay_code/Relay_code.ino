@@ -6,9 +6,9 @@ const long eventTime_2 = 120000; //in ms
 unsigned long previousTime_1 = 0;
 unsigned long previousTime_2 = 0;
 
-const int motor = 19;
-const int fan = 13;
-const int bulb = 12;
+const int motor = 16;
+const int fan = 27;
+const int bulb = 14;
 long lastMsg = 0;
 
 void setup() {

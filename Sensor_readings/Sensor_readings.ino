@@ -1,5 +1,5 @@
 #include "DHT.h"
-#define DHTPIN 18     // Digital pin connected to the DHT sensor
+#define DHTPIN 17     // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
 // Connect pin 1 (on the left) of the sensor to +5V

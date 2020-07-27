@@ -1,5 +1,5 @@
 #include "DHT.h"
-#define DHTPIN 18     // Digital pin connected to the DHT sensor
+#define DHTPIN 17     // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
 // Connect pin 1 (on the left) of the sensor to +5V
@@ -10,9 +10,9 @@ DHT dht(DHTPIN, DHTTYPE);
 float h;
 float t;
 
-const int motor = 19;
-const int fan = 23;
-const int bulb = 12;
+const int motor = 16;
+const int fan = 27;
+const int bulb = 14;
 
 void setup() {
  pinMode(bulb, OUTPUT);

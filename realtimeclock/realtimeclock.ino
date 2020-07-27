@@ -14,8 +14,8 @@ void setup ()
   {
     Serial.print("RTC is NOT running!");
   }
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));//auto update from computer time
-    //rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));// to set the time manualy 
+   // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));//auto update from computer time
+    rtc.adjust(DateTime(2020, 7, 8, 11, 50, 0));// to set the time manualy 
 }
 void loop () 
 {
