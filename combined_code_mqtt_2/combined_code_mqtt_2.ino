@@ -1,43 +1,43 @@
 
-#include <WiFi.h>
+#include <WiFi.h> //WiFi library
 extern "C" {
   #include "freertos/FreeRTOS.h"
-  #include "freertos/timers.h"
+  #include "freertos/timers.h"  // MQTT dependencies
 }
 #include "FS.h"
-#include "SD.h"
+#include "SD.h"  // SD Library
 #include "SPI.h"
 
-#include <AsyncMqttClient.h>
-#include "DHT.h"
+#include <AsyncMqttClient.h>  //MQTT library
+#include "DHT.h"  //DHT22 Library
 #define DHTPIN 17     // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-#include <Wire.h> 
-#include <LiquidCrystal_I2C.h>
-#include "RTClib.h"
-RTC_DS1307 rtc;
+#include <Wire.h>     // wire library for LCD
+#include <LiquidCrystal_I2C.h>     // LCD Library
+#include "RTClib.h"             //Real Time Library
+RTC_DS1307 rtc;                 //RTC initialization
 // Connect pin 1 (on the left) of the sensor to +5V
-// Connect pin 18 of the sensor to whatever your DHTPIN is
-// Connect pin 4 (on the right) of the sensor to GROUND
+// Connect pin 2 of the sensor to whatever your DHTPIN is 18
+// Connect pin 3 (on the right) of the sensor to GROUND
 // Initialize DHT sensor.
-DHT dht(DHTPIN, DHTTYPE);
-float h;
-float t;
-char daysOfTheWeek[7][12] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-String dataMessage;
+DHT dht(DHTPIN, DHTTYPE);  //DHT Library initialization
+float h;  // humidity declaration
+float t;  // timperature declaration
+char daysOfTheWeek[7][12] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}; //days init
+String dataMessage;   
 
-const int motor = 16;
-const int fan = 27;
-const int bulb = 14;
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+const int motor = 16; //motor pin declaration
+const int fan = 27; // fan pin declaration
+const int bulb = 14; // bulb pin declaration
+LiquidCrystal_I2C lcd(0x27, 16, 2); //LCD construct
 long lastMsg = 0;
 char msg[50];
 // Save reading number on RTC memory
 RTC_DATA_ATTR int readingID = 0;
 
 // Change the credentials below, so your ESP32 connects to your router
-#define WIFI_SSID "SuperJosh"
-#define WIFI_PASSWORD "useyourdata"
+#define WIFI_SSID "WorkSHop"
+#define WIFI_PASSWORD "inf12345"
 
 
 
@@ -47,17 +47,19 @@ AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 TimerHandle_t wifiReconnectTimer;
 
-
+// function to connect WiFi
 void connectToWifi() {
   Serial.println("Connecting to Wi-Fi...");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
+//function to connect to MQTT
 void connectToMqtt() {
   Serial.println("Connecting to MQTT...");
   mqttClient.connect();
 }
 
+//callback function
 void WiFiEvent(WiFiEvent_t event) {
   Serial.printf("[WiFi-event] event: %d\n", event);
   switch(event) {
@@ -81,11 +83,11 @@ void onMqttConnect(bool sessionPresent) {
   Serial.print("Session present: ");
   Serial.println(sessionPresent);
   // ESP32 subscribed to esp32/led topic
-  uint16_t packetIdSub = mqttClient.subscribe("/larteyjoshua@gmail.com/test", 0);
+  uint16_t packetIdSub = mqttClient.subscribe("/ieggincubator@gmail.com/commands", 0);
   Serial.print("Subscribing at QoS 0, packetId: ");
   Serial.println(packetIdSub);
 }
-
+//function to disconnect from MQTT
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   Serial.println("Disconnected from MQTT.");
   if (WiFi.isConnected()) {
@@ -93,6 +95,7 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   }
 }
 
+//function to subscribe to topic after connection 
 void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
   Serial.println("Subscribe acknowledged.");
   Serial.print("  packetId: ");
@@ -101,12 +104,14 @@ void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
   Serial.println(qos);
 }
 
+//function to unscribed from topic
 void onMqttUnsubscribe(uint16_t packetId) {
   Serial.println("Unsubscribe acknowledged.");
   Serial.print("  packetId: ");
   Serial.println(packetId);
 }
 
+//function to pusblish in a topic
 void onMqttPublish(uint16_t packetId) {
   Serial.println("Publish acknowledged.");
   Serial.print("  packetId: ");
@@ -121,7 +126,7 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     messageTemp += (char)payload[i];
   }
   // Check if the MQTT message was received on topic test
-  if (strcmp(topic, "/larteyjoshua@gmail.com/test") == 0) {
+  if (strcmp(topic, "/ieggincubator@gmail.com/commands") == 0) {
     Serial.print("Changing output to ");
     if(messageTemp == "heaton"){
       Serial.println("bulb is on");
@@ -168,6 +173,7 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   Serial.print("  total: ");
   Serial.println(total);
 }
+//function to read file from the SD Card and publish to incubatordata
 void readFile(fs::FS &fs, const char * path){
     Serial.printf("Reading file: %s\n", path);
 
@@ -183,15 +189,16 @@ void readFile(fs::FS &fs, const char * path){
    String datavalues = (file.readString());
 
 //        // Convert the value to a char array
-//      char dataString[1000];
+//      char dataString[10000];
 //      dtostrf( (file.readString()), 1, 2, dataString);
-      char dataReading[10000];
+      char dataReading[9999999999];
 //      String dataValues= String(dataString);
        datavalues.toCharArray(dataReading, (datavalues.length() + 1));
-        uint16_t packetIdPub2 = mqttClient.publish("/larteyjoshua@gmail.com/incubatordata", 2, true, dataReading);
+        uint16_t packetIdPub2 = mqttClient.publish("/ieggincubator@gmail.com/incubatordata", 2, true, dataReading);
     }
     file.close();
 }
+//function to write file to SD card
 void writeFile(fs::FS &fs, const char * path, const char * message){
     Serial.printf("Writing file: %s\n", path);
 
@@ -212,6 +219,7 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
     file.close();
 }
 
+//function to append to a file on SD card
 void appendFile(fs::FS &fs, const char * path, const char * message){
     Serial.printf("Appending to file: %s\n", path);
 
@@ -227,7 +235,7 @@ void appendFile(fs::FS &fs, const char * path, const char * message){
     }
     file.close();
 }
-
+//function to delete a file from Sd card
 void deleteFile(fs::FS &fs, const char * path){
     Serial.printf("Deleting file: %s\n", path);
     if(fs.remove(path)){
@@ -256,7 +264,7 @@ if(!SD.begin()){
         Serial.println("No SD card attached");
         return;
     }
-
+// printing card details
     Serial.print("SD Card Type: ");
     if(cardType == CARD_MMC){
         Serial.println("MMC");
@@ -268,11 +276,11 @@ if(!SD.begin()){
         Serial.println("UNKNOWN");
     }
 
- writeFile(SD, "/incubatordata.txt", " ID,Timestamp,Temperature,Humidity  \r\n");
+ //writeFile(SD, "/incubatordata.txt", " ID,Timestamp,Temperature,Humidity  \r\n");
 
 
   
-  
+  // initializing RTC
 if (! rtc.begin()) 
   {
     Serial.print("Couldn't find RTC");
@@ -283,14 +291,14 @@ if (! rtc.begin())
     Serial.print("RTC is NOT running!");
   }
     //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));//auto update from computer time
-    rtc.adjust(DateTime(2020, 7, 8, 11, 57, 0));// to set the time manualy 
+    rtc.adjust(DateTime(2020, 7, 28, 19, 50, 0));// to set the time manualy 
 
-
+//callback timer
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
 
   WiFi.onEvent(WiFiEvent);
-
+// MQTT parameters
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onSubscribe(onMqttSubscribe);
@@ -298,17 +306,16 @@ if (! rtc.begin())
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer("mqtt.dioty.co", 1883);
-  mqttClient.setCredentials("larteyjoshua@gmail.com","7f8a9110");
+  mqttClient.setCredentials("ieggincubator@gmail.com","c855c5c0"); // username and password
 
   connectToWifi();
 }
 
 void loop() {
-
-  // Wait a few seconds between measurements.
+// calling sensor reading function here
   getreadings();
   delay(2000);
-  if (t>39)
+  if (t>37.7)
   {
     bulb_off();
   }
@@ -324,7 +331,7 @@ void loop() {
   {
     fan_off();
   }
-
+//RTC time formating
  DateTime now = rtc.now();
     Serial.print(F("TIME"));
     Serial.print(" ");
@@ -350,16 +357,7 @@ void loop() {
     Serial.print(now.year());
     Serial.print("  ");
     
-  
-//    if ((now.hour()==18) && (now.minute()==36)){
-//      
-//       turningegg();
-//      }
-//      if ((now.hour()==18) && (now.minute()==37)){
-//      
-//       digitalWrite(motor, LOW);
-//      }
-
+// rotating function call up with RTC time
 
   if ((now.hour()==19) && (now.minute()==1)){
        digitalWrite(motor, HIGH);
@@ -381,7 +379,7 @@ void loop() {
   if ((now.hour()==11) && (now.minute()==2)){
        digitalWrite(motor, LOW);
       }
-   
+  //repeat event every 30 seconds 
   long time = millis();
   if (time - lastMsg > 30000) {
     lastMsg = time;
@@ -398,11 +396,11 @@ void loop() {
       Serial.println(HumiString);
        // Convert the value to a char array
        
-     
+     //concatinating sensor readings and pusblishing/printing on LCD
       char sensorReading[90];
       String sensorValues = "{ \"temperature\": \"" + String(TempString) + "\", \"humidity\" : \"" + String(HumiString) + "\"}";
       sensorValues.toCharArray(sensorReading, (sensorValues.length() + 1));
-     uint16_t packetIdPub2 = mqttClient.publish("/larteyjoshua@gmail.com/SensorData", 2, true, sensorReading);
+     uint16_t packetIdPub2 = mqttClient.publish("/ieggincubator@gmail.com/SensorData", 2, true, sensorReading);
     Serial.print("Publishing on topic esp32/SensorData at QoS 2, packetId: ");
     Serial.println(packetIdPub2);
       lcd.setCursor(0,0);
@@ -415,7 +413,8 @@ void loop() {
        lcd.print(HumiString);
        lcd.print("%");
         readingID++;
-
+// getting curent time and date
+// appending to fle datamessage
         char Timedate[20];
 sprintf(Timedate, "%02d:%02d:%02d %02d/%02d/%02d",  now.hour(), now.minute(), now.second(), now.day(), now.month(), now.year());
 Serial.print(F("Date/Time: "));
@@ -427,6 +426,7 @@ Serial.println(Timedate);
   }
 }
 
+//function to get DHT22 sensor readings
 void getreadings(){
    // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
@@ -447,20 +447,21 @@ void getreadings(){
   Serial.println(F("°C "));
   
   }
-  
+  //function to operate bulb
   void bulb_on(){
   digitalWrite(bulb, HIGH);
   }
    void bulb_off(){
   digitalWrite(bulb, LOW);
   }
-  
+  //function to operate fan
 void fan_on(){
   digitalWrite(fan, HIGH);
   }
  void fan_off(){
   digitalWrite(fan, LOW);
   }
+ // fubction to delete incubator data and write file
   void deleteandcreate(){
     deleteFile(SD, "/incubatordata.txt");
     writeFile(SD, "/incubatordata.txt", " ID,Timestamp,Temperature,Humidity \r\n");
